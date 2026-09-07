@@ -3,16 +3,37 @@
 Notifications Service — نظام إشعارات الركاب
 ================================================================
 
-الهدف من الملف ده تحديداً: إثبات عملي لمفهوم مهم:
+الهدف من الملف ده تحديداً:
+إثبات مفهوم مهم
 
-    نفس الرسالة (flight_status) بتتقرأ مرتين بالظبط:
-    مرة من checkin_service.py (Group: checkin-system)
-    ومرة من هنا (Group: notification-system)
+نفس الرسالة
+(flight_status)
 
-    كل Group ليه Offsets خاصة به تماماً، ومحدش بيأثر على التاني.
+بتتقرأ مرتين بالظبط:
 
-شغّل الملف ده بالتوازي مع checkin_service.py وهتلاقي الاتنين
-بيستقبلوا نفس تحديثات الرحلات، في نفس الوقت تقريباً.
+المرة الأولى:
+checkin_service.py
+Consumer Group: checkin-system
+
+المرة الثانية:
+notifications_service.py
+Consumer Group: notification-system
+
+
+كل Consumer Group
+ليه Offsets خاصة به تماماً
+
+ومحدش بيأثر على التاني.
+
+
+شغّل الملف ده بالتوازي مع:
+
+    checkin_service.py
+
+وهتلاقي الاتنين بيستقبلوا
+نفس تحديثات الرحلات
+
+في نفس الوقت تقريباً.
 """
 
 import json
