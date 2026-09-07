@@ -1,0 +1,13 @@
+{
+  "name": "baggage-elasticsearch-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "connection.url": "http://elasticsearch:9200",
+    "topics": "baggage_events",
+    "type.name": "_doc",
+    "key.ignore": "false",
+    "schema.ignore": "true",
+
+    "_comment": "Sink Connector: بياخد كل رسالة جديدة من Topic: baggage_events ويحطها في Elasticsearch للأرشفة والبحث السريع، من غير كود Consumer يدوي"
+  }
+}

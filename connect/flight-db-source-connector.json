@@ -1,0 +1,15 @@
+{
+  "name": "flight-db-source",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "connection.url": "jdbc:postgresql://airline-legacy-db:5432/flights",
+    "connection.user": "airport_reader",
+    "table.whitelist": "flight_updates",
+    "topic.prefix": "flight_status",
+    "mode": "incrementing",
+    "incrementing.column.name": "id",
+    "poll.interval.ms": "2000",
+
+    "_comment": "Source Connector: بيسحب أي صف جديد في جدول flight_updates ويحوله أوتوماتيك لرسالة في Topic: flight_status، من غير ما نكتب كود Producer يدوي"
+  }
+}

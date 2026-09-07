@@ -1,0 +1,89 @@
+version: "3.8"
+
+# ============================================================
+# Airport Kafka Cluster — 3 Brokers using KRaft (no ZooKeeper)
+# كلاستر Kafka بثلاث Brokers، بيستخدم KRaft بدل ZooKeeper
+# ============================================================
+#
+# كل Broker هنا بياخد دورين مع بعض: broker + controller
+# (زي ما اتشرح في مفهوم KRaft: process.roles=broker,controller)
+#
+# الـ Cluster ده هو اللي هيستضيف كل الـ Topics التلاتة اللي بنينا
+# عليهم كل الأمثلة طول الرحلة:
+#   - flight_status
+#   - baggage_events
+#   - customs_clearance
+
+x-kafka-env-common: &kafka-env-common
+  KAFKA_PROCESS_ROLES: "broker,controller"
+  KAFKA_CONTROLLER_QUORUM_VOTERS: "1@broker-1:9093,2@broker-2:9093,3@broker-3:9093"
+  KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+  KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  CLUSTER_ID: "airport-cluster-2026"
+
+services:
+  broker-1:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: broker-1
+    hostname: broker-1
+    environment:
+      <<: *kafka-env-common
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: "PLAINTEXT://broker-1:29092,CONTROLLER://broker-1:9093,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker-1:29092,PLAINTEXT_HOST://localhost:9092"
+    ports:
+      - "9092:9092"
+    volumes:
+      - broker1-data:/var/lib/kafka/data
+
+  broker-2:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: broker-2
+    hostname: broker-2
+    environment:
+      <<: *kafka-env-common
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: "PLAINTEXT://broker-2:29092,CONTROLLER://broker-2:9093,PLAINTEXT_HOST://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker-2:29092,PLAINTEXT_HOST://localhost:9093"
+    ports:
+      - "9093:9093"
+    volumes:
+      - broker2-data:/var/lib/kafka/data
+
+  broker-3:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: broker-3
+    hostname: broker-3
+    environment:
+      <<: *kafka-env-common
+      KAFKA_NODE_ID: 3
+      KAFKA_LISTENERS: "PLAINTEXT://broker-3:29092,CONTROLLER://broker-3:9093,PLAINTEXT_HOST://0.0.0.0:9094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker-3:29092,PLAINTEXT_HOST://localhost:9094"
+    ports:
+      - "9094:9094"
+    volumes:
+      - broker3-data:/var/lib/kafka/data
+
+  # واجهة رسومية بسيطة عشان تتفرج على الـ Topics والـ Partitions والـ Consumer Groups
+  # بدل الأوامر النصية بس
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: airport-kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "airport-cluster"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "broker-1:29092,broker-2:29092,broker-3:29092"
+    depends_on:
+      - broker-1
+      - broker-2
+      - broker-3
+
+volumes:
+  broker1-data:
+  broker2-data:
+  broker3-data:
