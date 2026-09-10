@@ -1,2 +1,7 @@
-kafka-python==2.0.2
+# ملحوظة: بنستخدم kafka-python-ng بدل kafka-python الأصلية
+# لأن kafka-python==2.0.2 عندها مشكلة توافق مع Python 3.12
+# (kafka.vendor.six.moves مش بيتحمل صح). النسخة دي (-ng) نفس
+# المكتبة بالظبط من ناحية الاستخدام (from kafka import KafkaProducer)
+# لكنها متحدثة ومتوافقة.
+kafka-python-ng==2.2.3
 faust-streaming==0.11.3

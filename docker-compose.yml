@@ -1,4 +1,4 @@
-# version: "3.8"
+version: "3.8"
 
 # ============================================================
 # Airport Kafka Cluster — 3 Brokers using KRaft (no ZooKeeper)
@@ -23,7 +23,7 @@ x-kafka-env-common: &kafka-env-common
   KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
   KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
   KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
-  CLUSTER_ID: "airport-cluster-2026"
+  CLUSTER_ID: "5zh96xY-S6uoUJl8Z-8A_A"
 
 services:
   broker-1:
@@ -47,10 +47,10 @@ services:
     environment:
       <<: *kafka-env-common
       KAFKA_NODE_ID: 2
-      KAFKA_LISTENERS: "PLAINTEXT://broker-2:29092,CONTROLLER://broker-2:9093,PLAINTEXT_HOST://0.0.0.0:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker-2:29092,PLAINTEXT_HOST://localhost:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://broker-2:29092,CONTROLLER://broker-2:9093,PLAINTEXT_HOST://0.0.0.0:9095"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://broker-2:29092,PLAINTEXT_HOST://localhost:9095"
     ports:
-      - "9093:9093"
+      - "9095:9095"
     volumes:
       - broker2-data:/var/lib/kafka/data
 
