@@ -4,4 +4,4 @@
 # المكتبة بالظبط من ناحية الاستخدام (from kafka import KafkaProducer)
 # لكنها متحدثة ومتوافقة.
 kafka-python-ng==2.2.3
-faust-streaming==0.11.3
+faust-streaming>=0.11.5

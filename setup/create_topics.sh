@@ -10,7 +10,7 @@
 #     docker exec -it broker-1 kafka-topics ...
 # يعني "ادخل جوه Container اسمه broker-1 وشغل الأمر ده من جواه"
 
-CONTAINER="broker-1" 
+CONTAINER="broker-1"
 BROKER="localhost:9092"   # ده عنوان الـ Broker من الداخل (جوه شبكة Docker)
 
 echo "=== Creating Topic: flight_status ✈️  ==="
@@ -65,6 +65,31 @@ docker exec -it $CONTAINER kafka-topics --create \
   --bootstrap-server $BROKER \
   --partitions 1 \
   --replication-factor 3 \
+  --if-not-exists
+
+echo "=== Creating Topic: airport-delay-monitor-delayed-counts-by-airline-changelog (Faust KTable) 📈 ==="
+# ده Topic داخلي بتاع Faust نفسه (مش من تصميمنا احنا)، بيستخدمه
+# عشان يحفظ حالة الـ KTable (delayed_counts) بشكل دائم.
+#
+# لو سبناه لـ Faust ينشئه بنفسه وقت التشغيل، بيحصل Race Condition:
+# Faust يطلب إنشاءه، وقبل ما الـ Metadata تنتشر بالكامل جوه الـ
+# Cluster، Faust يحاول يتأكد من عدد الـ Partitions ويلاقيها "0"
+# مؤقتاً، فيرمي:
+#   PartitionsMismatch: ... has 0 partitions
+#
+# عشان كده بننشئه إحنا يدوياً هنا الأول، بنفس عدد الـ Partitions
+# بتاع الـ Topic المصدر (flight_status = 3)، عشان Faust يلاقيه
+# جاهز ومتزامن تماماً من الأول ومحتاجش ينشئه بنفسه.
+#
+# نستخدم cleanup.policy=compact لأن الـ Changelog Topic بطبيعته
+# محتاج يحتفظ بس بآخر قيمة لكل Key (نفس مبدأ Log Compaction
+# اللي استخدمناه في gate_assignment)
+docker exec -it $CONTAINER kafka-topics --create \
+  --topic airport-delay-monitor-delayed-counts-by-airline-changelog \
+  --bootstrap-server $BROKER \
+  --partitions 3 \
+  --replication-factor 3 \
+  --config cleanup.policy=compact \
   --if-not-exists
 
 echo ""

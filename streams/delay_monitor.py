@@ -22,16 +22,22 @@ app = faust.App(
 )
 
 # Topic المدخل: نفس flight_status اللي بنيناه من البداية
-flight_topic = app.topic("flight_status", value_type=dict)
+# ملحوظة: من غير value_type، Faust هيفك تشفير JSON تلقائياً
+# ويرجع dict عادي (بفضل value_serializer="json" المحدد فوق في الـ App)
+flight_topic = app.topic("flight_status")
 
 # Topic المخرج: نتيجة المعالجة (Kafka Streams بيكتب هنا)
-delayed_count_topic = app.topic("delayed_flights_count", value_type=dict)
+delayed_count_topic = app.topic("delayed_flights_count")
 
 # KTable بسيط: بيحتفظ بعدد الرحلات المتأخرة لكل شركة طيران
+# ملحوظة: partitions لازم يطابق بالظبط عدد partitions بتاعة
+# الـ Topic المصدر (flight_status له 3 partitions)، عشان Kafka
+# Streams يقدر يربط كل partition بالـ partition المقابلة لها
+# في الـ changelog topic الداخلي
 delayed_counts = app.Table(
     "delayed-counts-by-airline",
     default=int,
-    partitions=1,
+    partitions=3,
 )
 
 

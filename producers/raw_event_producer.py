@@ -21,7 +21,7 @@ import time
 import random
 from kafka import KafkaProducer
 
-BROKERS = ["localhost:9092", "localhost:9093", "localhost:9094"]
+BROKERS = ["localhost:9092", "localhost:9095", "localhost:9094"]
 
 
 def make_producer(acks_level):
@@ -45,17 +45,9 @@ def process_and_split(raw_event):
     كل واحدة برسالتها الخاصة وبالـ Key المناسب لها.
     """
 
-    # ─────────────────────────────────────────────
-# 1) جزء حالة الرحلة
-#
-# Topic: flight_status
-#
-# الـ Key = رقم الرحلة
-# عشان كل تحديثات نفس الرحلة تروح لنفس الـ Partition
-# وبالتالي يحافظوا على ترتيبهم الزمني الصحيح
-# ─────────────────────────────────────────────
-    
-    
+    # 1) جزء حالة الرحلة -> Topic: flight_status
+    #    الـ Key = رقم الرحلة، عشان كل تحديثات نفس الرحلة تروح لنفس الـ Partition
+    #    وبالتالي يحافظوا على ترتيبهم الزمني الصحيح
     flight_data = raw_event["flight"]
     critical_producer.send(
         topic="flight_status",
@@ -63,15 +55,9 @@ def process_and_split(raw_event):
         value=flight_data,
     )
 
-    # 2) جزء الأمتعة
-# Topic: baggage_events
-#
-# ممكن يكون فيه أكتر من شنطة
-# فبنعمل loop ونبعت رسالة منفصلة لكل شنطة
-#
-# الـ Key = bag_id
-# عشان تاريخ كل شنطة يفضل مترتب في نفس الـ Partition
-
+    # 2) جزء الأمتعة -> Topic: baggage_events
+    #    ممكن يكون فيه أكتر من شنطة، فبنعمل loop ونبعت رسالة منفصلة لكل شنطة
+    #    الـ Key = bag_id، عشان تاريخ كل شنطة يفضل مترتب في نفس الـ Partition
     for bag in raw_event["baggage"]:
         frequent_producer.send(
             topic="baggage_events",
@@ -86,15 +72,9 @@ def process_and_split(raw_event):
         key=customs_data["passenger_id"],
         value=customs_data,
     )
-# 4) تحديث آخر بوابة للرحلة
-# Topic: gate_assignment
-# Log Compaction
-#
-# هنا بنستخدم Producer عادي
-# مش Critical
-# لأن ده مجرد "آخر حالة"
 
-
+    # 4) تحديث آخر بوابة للرحلة -> Topic: gate_assignment (Log Compaction)
+    #    هنا بنستخدم Producer عادي (مش critical) لأن ده مجرد "آخر حالة"
     frequent_producer.send(
         topic="gate_assignment",
         key=flight_data["flight_number"],
@@ -125,7 +105,13 @@ def generate_sample_event(flight_number, airline, status, gate):
                 "bag_id": f"BG{random.randint(1000, 9999)}",
                 "flight_number": flight_number,
                 "passenger_id": f"P{random.randint(1000, 9999)}",
-                "event_type": "unloaded",
+                # نولد نوع حدث عشوائي، بنفس الأنواع اللي اتفقنا عليها
+                # في مثال المطار: تحميل، تنزيل، على السير، أو فقدان نادر
+                "event_type": random.choices(
+                    ["loaded_on_plane", "unloaded", "on_belt", "bag_lost"],
+                    weights=[30, 30, 35, 5],  # bag_lost نادر عن قصد
+                    k=1,
+                )[0],
                 "message_timestamp": now,
             }
             for _ in range(random.randint(1, 3))

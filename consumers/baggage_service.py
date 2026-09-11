@@ -9,12 +9,19 @@ Baggage Service — نظام تتبع الأمتعة
     الرسايل بشكل مستقل، مفيش تعارض بين الاتنين)
   - قراءة من Topic له 4 Partitions
   - حساب Consumer Lag يدوياً لكل Partition (مؤشر مهم في الإنتاج)
+
+ملحوظة عن الاستقرار:
+  مكتبة kafka-python-ng عندها Bug معروف (مش متعلق بمشروعنا) بيظهر
+  كـ "ValueError: Invalid file descriptor: -1" لو الاتصال بالـ Broker
+  انقطع فجأة (شائع فوق WSL2/Docker Desktop). عشان كده الكود هنا
+  بيعيد إنشاء الـ Consumer تلقائياً لو الخطأ ده حصل، بدل ما يقف.
 """
 
 import json
+import time
 from kafka import KafkaConsumer, TopicPartition
 
-BROKERS = ["localhost:9092", "localhost:9093", "localhost:9094"]
+BROKERS = ["localhost:9092", "localhost:9095", "localhost:9094"]
 
 
 def print_consumer_lag(consumer, topic):
@@ -31,8 +38,8 @@ def print_consumer_lag(consumer, topic):
         print(f"    [LAG] partition={tp.partition} lag={lag} messages")
 
 
-def main():
-    consumer = KafkaConsumer(
+def make_consumer():
+    return KafkaConsumer(
         "baggage_events",
         bootstrap_servers=BROKERS,
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
@@ -41,31 +48,49 @@ def main():
         enable_auto_commit=False,
     )
 
+
+def main():
+    consumer = make_consumer()
     print("=== Baggage Service شغال، عضو في Consumer Group: baggage-team ===")
 
     message_count = 0
-    try:
-        while True:
-            records = consumer.poll(timeout_ms=1000)
 
-            for partition, messages in records.items():
-                for message in messages:
-                    bag = message.value
-                    print(
-                        f"[BAG UPDATE] partition={message.partition} "
-                        f"bag_id={bag['bag_id']} event={bag['event_type']}"
-                    )
-                    message_count += 1
+    while True:  # حلقة خارجية: لو حصل انقطاع، بنعيد الاتصال من هنا
+        try:
+            while True:
+                records = consumer.poll(timeout_ms=1000)
 
-            if records:
-                consumer.commit()
+                for partition, messages in records.items():
+                    for message in messages:
+                        bag = message.value
+                        print(
+                            f"[BAG UPDATE] partition={message.partition} "
+                            f"bag_id={bag['bag_id']} event={bag['event_type']}"
+                        )
+                        message_count += 1
 
-                # كل 5 رسايل نطبع الـ Lag، عشان نراقب صحة الـ Consumer
-                if message_count % 5 == 0:
-                    print_consumer_lag(consumer, "baggage_events")
+                if records:
+                    consumer.commit()
 
-    finally:
-        consumer.close()
+                    # كل 5 رسايل نطبع الـ Lag، عشان نراقب صحة الـ Consumer
+                    if message_count % 5 == 0:
+                        print_consumer_lag(consumer, "baggage_events")
+
+        except KeyboardInterrupt:
+            consumer.close()
+            break
+
+        except Exception as e:
+            # هنا بنمسك أي مشكلة اتصال عابرة (زي Bug الـ selector المعروف)
+            # ونعيد إنشاء الـ Consumer من جديد بدل ما البرنامج يقف كله
+            print(f"[CONNECTION ISSUE] {type(e).__name__}: {e}")
+            print("[RECOVERING] بنعيد الاتصال بعد 3 ثواني...")
+            try:
+                consumer.close()
+            except Exception:
+                pass
+            time.sleep(3)
+            consumer = make_consumer()
 
 
 if __name__ == "__main__":
