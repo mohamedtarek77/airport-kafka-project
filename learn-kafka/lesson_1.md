@@ -1,5 +1,3 @@
-<div dir="rtl">
-
 # الدرس 1: Topics و Partitions و Offsets
 
 ## الخطوة 0: ليه أصلاً محتاجين Kafka؟
@@ -115,6 +113,44 @@ Offset (رقم تسلسلي ثابت يحدد مكانها بالظبط جوه �
 
 > **ملاحظة**: الـ `Offset` اللي شرحناه هنا هو المفهوم الأساسي البسيط. لما نوصل لدرس الـ `Consumers`، هنكتشف إن فيه أكتر من "منظور" لرقم الـ offset (فين آخر رسالة اتكتبت، وفين وصل القارئ، وفين آخر نقطة سجلها) — لكن ده مبني فوق نفس الأساس اللي فهمناه هنا، مش مفهوم مختلف.
 
+## مثال بكود Python (`kafka-python-ng`)
+
+نقدر ننشئ `Topic` بعدد partitions محدد باستخدام `KafkaAdminClient`:
+
+```python
+from kafka.admin import KafkaAdminClient, NewTopic
+
+admin = KafkaAdminClient(bootstrap_servers="localhost:9092")
+
+topic = NewTopic(
+    name="flights.checkin",
+    num_partitions=3,       # هنا بنحدد عدد الـ Partitions
+    replication_factor=1,   # هنشرح الرقم ده بالتفصيل في درس الـ Replication
+)
+
+admin.create_topics([topic])
+admin.close()
+```
+
+ونقدر نشوف عدد الـ partitions وحالة كل واحدة فيهم (بما فيها آخر offset متاح) باستخدام `KafkaConsumer`:
+
+```python
+from kafka import KafkaConsumer
+
+consumer = KafkaConsumer(bootstrap_servers="localhost:9092")
+
+partitions = consumer.partitions_for_topic("flights.checkin")
+print(f"عدد الـ Partitions: {len(partitions)}")  # {0, 1, 2}
+
+for p in partitions:
+    from kafka import TopicPartition
+    tp = TopicPartition("flights.checkin", p)
+    end_offset = consumer.end_offsets([tp])[tp]
+    print(f"Partition {p} → آخر offset متاح (LEO): {end_offset}")
+
+consumer.close()
+```
+
 ## تمرين صغير
 
 لو عندك `Topic` اسمه `flights.boarding` وعليه 3 partitions فاضية تمامًا (يعني لسه مافيهاش أي رسالة):
@@ -125,5 +161,3 @@ Offset (رقم تسلسلي ثابت يحدد مكانها بالظبط جوه �
 
 ---
 ◀ [الفهرس](./00-index.md) | التالي ▶ [الدرس 2: Producers](./02-producers.md)
-
-</div>
