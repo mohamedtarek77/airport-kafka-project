@@ -77,6 +77,49 @@ acks=all: الـ Producer يستنى رد إضافي إن باقي النسخ ك
 - تقليل حجم الرسالة الواحدة، وتحسين الأداء العام.
 - إمكانية معالجة كل جزء بسرعة مختلفة حسب أهميته (مثلًا: بيانات الأمان تتعالج فورًا، بيانات إحصائية تتعالج لاحقًا).
 
+## مثال بكود Python (`kafka-python-ng`)
+
+إرسال رسالة من غير `key` (خطوة 2):
+
+```python
+from kafka import KafkaProducer
+import json
+
+producer = KafkaProducer(
+    bootstrap_servers="localhost:9092",
+    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+)
+
+producer.send("flights.checkin", value={"passenger": "Ahmed", "flight": "101"})
+producer.flush()
+```
+
+إرسال رسالة بـ `key` عشان تضمن ترتيب رسائل نفس الرحلة (خطوة 4):
+
+```python
+producer.send(
+    "flights.boarding",
+    key=b"flight_101",   # نفس الـ key دايمًا هيروح لنفس الـ Partition
+    value={"event": "boarding_started", "flight": "101"},
+)
+producer.flush()
+```
+
+ضبط مستوى الـ `acks` (خطوة 6) — هنا استخدمنا `acks="all"` لأن فقدان رسالة تسجيل صعود راكب غير مقبول:
+
+```python
+producer = KafkaProducer(
+    bootstrap_servers="localhost:9092",
+    acks="all",              # استنى تأكيد من كل الـ ISR قبل ما تكمل
+    key_serializer=str.encode,
+    value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+)
+
+producer.send("flights.boarding", key="flight_101", value={"event": "boarding_started"})
+producer.flush()
+producer.close()
+```
+
 ## تمرين صغير
 
 لو انت بتبني نظام بيسجل دخول الركاب على متن الطائرة (`boarding`)، وأي رسالة ضايعة معناها راكب اتسجل غلط:
