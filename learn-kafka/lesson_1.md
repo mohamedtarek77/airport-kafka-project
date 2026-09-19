@@ -1,3 +1,5 @@
+<div dir="rtl">
+
 # الدرس 1: Topics و Partitions و Offsets
 
 ## الخطوة 0: ليه أصلاً محتاجين Kafka؟
@@ -123,3 +125,5 @@ Offset (رقم تسلسلي ثابت يحدد مكانها بالظبط جوه �
 
 ---
 ◀ [الفهرس](./00-index.md) | التالي ▶ [الدرس 2: Producers](./02-producers.md)
+
+</div>
